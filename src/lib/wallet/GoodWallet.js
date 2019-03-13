@@ -1,11 +1,12 @@
 // @flow
-import type Web3 from 'web3'
+import type { Web3, PromiEvent, Transaction } from 'web3'
 import WalletFactory from './WalletFactory'
 import IdentityABI from '@gooddollar/goodcontracts/build/contracts/Identity.json'
 import RedemptionABI from '@gooddollar/goodcontracts/build/contracts/RedemptionFunctional.json'
 import GoodDollarABI from '@gooddollar/goodcontracts/build/contracts/GoodDollar.json'
 import ReserveABI from '@gooddollar/goodcontracts/build/contracts/GoodDollarReserve.json'
 import OneTimePaymentLinksABI from '@gooddollar/goodcontracts/build/contracts/OneTimePaymentLinks.json'
+import timeoutPromise, { TimeoutError } from 'promise-timeout'
 import logger from '../../lib/logger/pino-logger'
 import Config from '../../config/config'
 
@@ -23,6 +24,13 @@ const AccountUsageToPath = {
   donate: 3
 }
 export type AccountUsage = $Keys<typeof AccountUsageToPath>
+
+class TxTimeoutError extends Error {
+  constructor(txHash, ...args) {
+    super(...args)
+    this.txHash = txHash
+  }
+}
 export class GoodWallet {
   ready: Promise<Web3>
   wallet: Web3
@@ -149,6 +157,23 @@ export class GoodWallet {
   async canSend(amount: number) {
     const balance = await this.balanceOf()
     return amount < balance
+  }
+
+  async handleTxGracefully(promievent: PromiEvent): Promise<Transaction> {
+    let txHash = undefined
+    const resPromise = new Promise((resolve, reject) => {
+      promievent.on('transactionHash', hash => (txHash = hash))
+      promievent.on('reciept', resolve)
+      promievent.on('error', e => {
+        log.debug({ txError: e })
+        reject(e)
+      })
+    })
+    return timeoutPromise(resPromise, 15000).catch(e => {
+      log.debug({ txError: e })
+      if (e instanceof TimeoutError && txHash) throw new TxTimeoutError(txHash, 'Transaction timed out')
+      else throw e
+    })
   }
 
   async generateLink(amount: number) {

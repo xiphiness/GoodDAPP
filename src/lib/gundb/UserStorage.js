@@ -33,7 +33,9 @@ class UserStorage {
   profile: Gun
   feed: Gun
   user: GunDBUser
+  gunuser: Gun
   ready: Promise<boolean>
+  feedIndex: Array<[Date, number]>
 
   static maskField = (fieldType: 'email' | 'mobile' | 'phone', value: string): string => {
     if (fieldType === 'email') {
@@ -60,20 +62,20 @@ class UserStorage {
     //sign with different address so its not connected to main user address and there's no 1-1 link
     const username = await this.wallet.sign('GoodDollarUser', 'gundb')
     const password = await this.wallet.sign('GoodDollarPass', 'gundb')
-    const gunuser = global.gun.user()
+    this.gunuser = global.gun.user()
     return new Promise((res, rej) => {
-      gunuser.create(username, password, async userCreated => {
+      this.gunuser.create(username, password, async userCreated => {
         logger.debug('gundb user created', userCreated)
         //auth.then - doesnt seem to work server side in tests
-        gunuser.auth(username, password, user => {
+        this.gunuser.auth(username, password, user => {
           this.user = user
-          this.profile = gunuser.get('profile')
+          this.profile = this.gunuser.get('profile')
           this.initFeed()
           //save ref to user
           global.gun
             .get('users')
-            .get(gunuser.is.pub)
-            .put(gunuser)
+            .get(this.gunuser.is.pub)
+            .put(this.gunuser)
           logger.debug('GunDB logged in', { username, pubkey: this.wallet.account, user: this.user.sea })
           res(true)
           // this.profile = user.get('profile')
