@@ -60,6 +60,7 @@ class UserStorage {
     this.wallet = goodWallet
     this.ready = this.wallet.ready
       .then(() => this.init())
+      .then(() => this.initLoginListener())
       .catch(e => {
         logger.error('Error initializing UserStorage', e)
         return true
@@ -98,6 +99,15 @@ class UserStorage {
     })
   }
 
+  async initLoginListener() {
+    console.log('#messages')
+    global.gun.get('#messages').on(msg => {
+      console.log('Got login message', msg)
+    })
+  }
+  addMsgListener(cb) {
+    return global.gun.get('#messages').on(x => cb(x))
+  }
   updateFeedIndex = (changed: any, field: string) => {
     if (field !== 'index' || changed === undefined) return
     delete changed._
