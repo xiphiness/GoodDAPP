@@ -58,10 +58,4 @@ const styles = StyleSheet.create({
   }
 })
 
-let hotWrapper = () => () => App
-if (Platform.OS === 'web') {
-  const { hot } = require('react-hot-loader')
-  hotWrapper = hot
-}
-//$FlowFixMe
-export default hotWrapper(module)(App)
+export default App
