@@ -19,6 +19,7 @@ import userStorage from '../../lib/gundb/UserStorage'
 import type { SMSRecord } from './SmsForm'
 import GDStore from '../../lib/undux/GDStore'
 import { getUserModel, type UserModel } from '../../lib/gundb/UserModel'
+import Config from '../../config/config'
 
 const log = logger.child({ from: 'SignupState' })
 
@@ -54,6 +55,18 @@ const Signup = ({ navigation, screenProps }: { navigation: any, screenProps: any
     userStorage.setProfile({ ...state, walletAddress: goodWallet.account })
   }
 
+  const doRecaptcha = async () => {
+    return new Promise((resolve, reject) => {
+      try {
+        window.grecaptcha.execute(Config.recaptcha, { action: 'signup' }).then(token => {
+          resolve(token)
+        })
+      } catch (e) {
+        log.error('recaptcha error', e)
+        reject(e)
+      }
+    })
+  }
   const done = async (data: { [string]: string }) => {
     log.info('signup data:', { data })
     setState({ ...state, ...data })
@@ -78,14 +91,15 @@ const Signup = ({ navigation, screenProps }: { navigation: any, screenProps: any
       if (nextRoute) {
         navigation.navigate(nextRoute.key)
       } else {
-        log.info('Sending new user data', state)
+        const recaptchaToken = await doRecaptcha()
+        log.info('Sending new user data', { recaptchaToken, state })
         saveProfile()
         try {
           // After sending email to the user for confirmation (transition between Email -> EmailConfirmation)
           // user's profile is persisted (`userStorage.setProfile`).
           // Then, when the user access the application from the link (in EmailConfirmation), data is recovered and
           // saved to the `state`
-          await API.addUser(state)
+          await API.addUser({ ...state, recaptchaToken })
           await API.verifyUser({})
           const destinationPath = store.get('destinationPath')
           store.set('isLoggedInCitizen')(true)
