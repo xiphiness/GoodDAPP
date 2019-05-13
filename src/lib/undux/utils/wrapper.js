@@ -41,6 +41,7 @@ function Handler(store, params) {
       dialogData: { visible: true, title: 'Error', message, dismissText: 'OK', onDismiss },
       loading: false
     })
+    throw error
   }
 }
 
