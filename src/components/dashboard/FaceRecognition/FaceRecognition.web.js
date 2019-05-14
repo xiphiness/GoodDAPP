@@ -1,22 +1,19 @@
 // @flow
-
-import loadjs from 'loadjs'
 import React, { createRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Text } from 'react-native-paper'
 import normalize from 'react-native-elements/src/helpers/normalizeText'
 import GDStore from '../../../lib/undux/GDStore'
-import Config from '../../../config/config'
 import API from '../../../lib/API/api'
 import logger from '../../../lib/logger/pino-logger'
 import userStorage from '../../../lib/gundb/UserStorage'
 import { CustomButton, Section, Wrapper } from '../../common'
-import { fontStyle } from '../../common/styles'
 import goodWallet from '../../../lib/wallet/GoodWallet'
 import { LinkButton } from '../../signup/components'
 import type { DashboardProps } from '../Dashboard'
-import { capture, initializeAndPreload, type ZoomCaptureResult } from './Zoom'
-import { Camera, getResponsiveVideoDimensions } from './Camera.web'
+import { type ZoomCaptureResult } from './Zoom'
+import { getResponsiveVideoDimensions } from './Camera.web'
+import ZoomCapture from './ZoomCapture'
 
 const log = logger.child({ from: 'FaceRecognition' })
 
@@ -221,7 +218,7 @@ class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
             <Section style={styles.bottomSection}>
               <div id="zoom-parent-container" style={getVideoContainerStyles()}>
                 <div id="zoom-interface-container" style={{ position: 'absolute' }} />
-                <Camera height={this.height} onLoad={this.onCameraLoad} onError={this.onFaceRecognitionFailure} />
+                <ZoomCapture height={this.height} screenProps={this.screenProps} />
               </div>
             </Section>
           </View>
