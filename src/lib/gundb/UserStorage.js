@@ -497,11 +497,15 @@ export class UserStorage {
       this.profile
         .get(field)
         .get('value')
-        .secretAck(value),
-      this.profile.get(field).putAck({
-        display,
-        privacy
-      })
+        .secret(value)
+        .then(),
+      this.profile
+        .get(field)
+        .put({
+          display,
+          privacy
+        })
+        .then()
     ]).then(arr => arr[1])
   }
 
@@ -536,10 +540,10 @@ export class UserStorage {
         return Promise.resolve({ err: `Existing index on field ${field}`, ok: 0 })
       }
       if (privacy !== 'public' && indexValue !== undefined) {
-        return indexNode.putAck(null)
+        return indexNode.put(null).then()
       }
 
-      const indexResult = indexNode.putAck(this.gunuser)
+      const indexResult = indexNode.put(this.gunuser).then()
 
       // logger.info({ gunResult })
       return indexResult
@@ -557,7 +561,8 @@ export class UserStorage {
    */
   async setProfileFieldPrivacy(field: string, privacy: FieldPrivacy): Promise<ACK> {
     let value = await this.getProfileFieldValue(field)
-    return this.setProfileField(field, value, privacy)
+    if (value) return this.setProfileField(field, value, privacy)
+    return { ok: 1 }
   }
 
   /**
@@ -783,7 +788,8 @@ export class UserStorage {
     await this.feed
       .get('byid')
       .get(event.id)
-      .secretAck(event)
+      .secret(event)
+      .then()
       .catch(e => {
         logger.error('updateFeedEvent failedEncrypt byId:', e, event)
         return { err: e.message }
@@ -801,12 +807,14 @@ export class UserStorage {
     }
     let saveAck = this.feed
       .get(day)
-      .putAck(JSON.stringify(dayEventsArr))
+      .put(JSON.stringify(dayEventsArr))
+      .then()
       .catch(err => logger.error('updateFeedEvent dayIndex', err))
     const ack = this.feed
       .get('index')
       .get(day)
-      .putAck(dayEventsArr.length)
+      .put(dayEventsArr.length)
+      .then()
       .catch(err => logger.error('updateFeedEvent daySize', err))
 
     if (event.data && event.data.receipt) {
@@ -836,7 +844,9 @@ export class UserStorage {
    */
   async saveLastBlockNumber(blockNumber: number | string): Promise<any> {
     logger.debug('saving lastBlock:', blockNumber)
-    return this.getLastBlockNode().putAck(blockNumber)
+    return this.getLastBlockNode()
+      .put(blockNumber)
+      .then()
   }
 
   getProfile(): Promise<any> {
@@ -844,6 +854,21 @@ export class UserStorage {
       this.profile.load(async profile => res(await this.getPrivateProfile(profile)), { wait: 99 })
     })
   }
+
+  /**
+   * remove user from indexes when deleting profile
+   */
+  async deleteProfile(): Promise<> {
+    //first delete from indexes then delete the profile itself
+    return Promise.all(UserStorage.indexableFields.map(async (k, v) => this.setProfileFieldPrivacy(k, 'private'))).then(
+      r =>
+        this.gunuser
+          .get('profile')
+          .put('null')
+          .then()
+    )
+  }
+
   /**
    * Delete the user account.
    * Deleting gundb profile and clearing local storage
@@ -860,9 +885,7 @@ export class UserStorage {
         .catch(e => ({
           server: 'failed'
         })),
-      this.gunuser
-        .get('profile')
-        .put('null')
+      this.deleteProfile()
         .then(r => ({
           profile: 'ok'
         }))
