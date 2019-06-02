@@ -1,14 +1,17 @@
 // @flow
+import ZoomCapture from './ZoomCapture'
 import React, { createRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Text } from 'react-native-paper'
-import normalize from 'react-native-elements/src/helpers/normalizeText'
-import { Wrapper, CustomButton, Section } from '../../common'
-import ZoomCapture from './ZoomCapture'
-import { getResponsiveVideoDimensions } from './Camera.web'
-import { FRUtil } from './FRUtil'
-import type { DashboardProps } from '../Dashboard'
 import { type ZoomCaptureResult } from './Zoom'
+import GDStore from '../../../lib/undux/GDStore'
+import type { DashboardProps } from '../Dashboard'
+import { FRUtil } from './FRUtil'
+import logger from '../../../lib/logger/pino-logger'
+import { Wrapper, CustomButton, Section } from '../../common'
+import normalize from 'react-native-elements/src/helpers/normalizeText'
+
+const log = logger.child({ from: 'FaceRecognition' })
 
 type FaceRecognitionProps = DashboardProps & {
   screenProps: any,
@@ -21,7 +24,8 @@ type State = {
   loadingFaceRecognition: boolean,
   loadingText: string,
   facemap: Blob,
-  ready: boolean
+  zoomReady: boolean,
+  captureResult: ZoomCaptureResult
 }
 
 class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
@@ -31,7 +35,8 @@ class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
     loadingFaceRecognition: false,
     loadingText: '',
     facemap: null,
-    ready: false
+    zoomReady: false,
+    captureResult: null
   }
 
   containerRef = createRef()
@@ -42,21 +47,31 @@ class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
 
   async componentDidMount() {
     this.setWidth()
-    this.props.store.on('captureResult').subscribe(async captureResult => {
-      console.log('capture result changed to:', captureResult)
-      this.setState({
-        showZoomCapture: false,
-        loadingFaceRecognition: true,
-        loadingText: 'Analyzing Face Recognition..'
-      })
-      this.setState({ loadingFaceRecognition: true, loadindText: '' })
+  }
 
-      let result: FaceRecognitionResponse = await FRUtil.performFaceRecognition(captureResult)
-      this.setState({ loadingFaceRecognition: false, loadindText: '' })
-      if (!result || !result.ok) {
-        this.showFRError(result.error)
-      }
+  onZoomReady() {
+    this.setState({ zoomReady: true })
+  }
+
+  onCaptureResult(captureResult: ZoomCaptureResult) {
+    log.debug('zoom capture completed')
+    this.setState({ captureResult: captureResult }, this.startFRProcess(captureResult))
+  }
+
+  async startFRProcess(captureResult: ZoomCaptureResult) {
+    console.log('capture result changed to:', captureResult)
+    this.setState({
+      showZoomCapture: false,
+      loadingFaceRecognition: true,
+      loadingText: 'Analyzing Face Recognition..'
     })
+    this.setState({ loadingFaceRecognition: true, loadindText: '' })
+
+    let result: FaceRecognitionResponse = await FRUtil.performFaceRecognition(captureResult)
+    this.setState({ loadingFaceRecognition: false, loadindText: '' })
+    if (!result || !result.ok) {
+      this.showFRError(result.error)
+    }
   }
 
   showFRError(error: string) {
@@ -87,7 +102,7 @@ class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
   render() {
     const { store }: FaceRecognitionProps = this.props
     const { fullName } = store.get('profile')
-    const { showZoomCapture, showPreText, loadingFaceRecognition, loadingText, ready } = this.state
+    const { showZoomCapture, showPreText, loadingFaceRecognition, loadingText, zoomReady } = this.state
 
     return (
       <Wrapper>
@@ -104,7 +119,12 @@ class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
         )}
         {showPreText && (
           <View style={styles.bottomContainer}>
-            <CustomButton mode="contained" onPress={this.showFaceRecognition} loading={loadingFaceRecognition}>
+            <CustomButton
+              mode="contained"
+              disabled={zoomReady === false}
+              onPress={this.showFaceRecognition}
+              loading={loadingFaceRecognition}
+            >
               Quick Face Recognition
             </CustomButton>
           </View>
@@ -115,15 +135,13 @@ class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
           </CustomButton>
         )}
 
-        {ready && showZoomCapture && (
-          <View>
-            <Section style={styles.bottomSection}>
-              <div id="zoom-parent-container" style={getVideoContainerStyles()}>
-                <div id="zoom-interface-container" style={{ position: 'absolute' }} />
-                <ZoomCapture height={this.height} screenProps={this.screenProps} />
-              </div>
-            </Section>
-          </View>
+        {showZoomCapture && (
+          <ZoomCapture
+            height={this.height}
+            screenProps={this.screenProps}
+            onZoomReady={this.onZoomReady}
+            onCaptureResult={this.onCaptureResult}
+          />
         )}
       </Wrapper>
     )
@@ -144,37 +162,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end'
   },
   description: {
-    fontSize: normalize(18)
-  },
-  bottomSection: {
-    flex: 1,
-    backgroundColor: '#fff'
-  },
-  acceptTermsText: {
-    ...fontStyle,
-    fontSize: normalize(14),
-    marginBottom: '1rem'
-  },
-  acceptTermsLink: {
-    ...fontStyle,
-    fontSize: normalize(14),
-    fontWeight: 'bold'
-  },
-  mainTitle: {
-    fontSize: normalize(24),
-    fontWeight: '500',
-    marginBottom: '1rem',
-    color: '#555',
-    textAlign: 'center'
+    fontSize: normalize(20)
   }
-})
-
-const getVideoContainerStyles = () => ({
-  ...getResponsiveVideoDimensions(),
-  marginLeft: 'auto',
-  marginRight: 'auto',
-  marginTop: 0,
-  marginBottom: 0
 })
 
 export default GDStore.withStore(FaceRecognition)
