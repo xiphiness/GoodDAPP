@@ -12,7 +12,7 @@ import fs from 'fs'
 import fetch from 'node-fetch'
 const Timeout = () => {
   return new Promise((res, rej) => {
-    setTimeout(res, 1000)
+    setTimeout(res, 2000)
   })
 }
 const createReq = (id, jwt) => {
@@ -50,12 +50,16 @@ export const mytest = async () => {
   console.log(fr)
   setInterval(async () => {
     await global.gun.get('x').putAck({ z: 1 })
-    console.log('pinging gun with ack')
+    console.log('pinging gun with ack', wallet.account)
   }, 30000)
 }
-for (let i = 0; i < 1; i++) {
-  mytest()
+const run = async () => {
+  for (let i = 0; i < 30; i++) {
+    mytest()
+    await Timeout()
+  }
 }
+run()
 // describe('load test', () => {
 //   it('loadtest', async () => {
 //     const doLogin = async () => {
