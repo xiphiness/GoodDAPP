@@ -5,7 +5,7 @@ import normalize from 'react-native-elements/src/helpers/normalizeText'
 import GDStore from '../../../lib/undux/GDStore'
 import type { DashboardProps } from '../Dashboard'
 import logger from '../../../lib/logger/pino-logger'
-import { Wrapper, CustomButton, Section } from '../../common'
+import { CustomButton, Section, Wrapper } from '../../common'
 import FRapi from './FaceRecognitionAPI'
 import ZoomCapture from './ZoomCapture'
 import { type ZoomCaptureResult } from './Zoom'
@@ -51,7 +51,7 @@ class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
 
   height = 0
 
-  async componentDidMount() {
+  componentDidMount = async () => {
     this.setWidth()
   }
 
@@ -65,32 +65,33 @@ class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
     this.height = 1280
   }
 
-  onZoomReady() {
+  onZoomReady = () => {
+    log.debug('zoom loaded successfully')
     this.setState({ zoomReady: true })
   }
 
-  onCaptureResult(captureResult: ZoomCaptureResult) {
+  onCaptureResult = (captureResult: ZoomCaptureResult) => {
     log.debug('zoom capture completed')
-    this.setState({ captureResult: captureResult }, this.startFRProcessOnServer(captureResult))
+    this.setState({ captureResult: captureResult }, this.startFRProcessOnServer)
   }
 
-  async startFRProcessOnServer(captureResult: ZoomCaptureResult) {
-    console.log('Sending capture result to server', captureResult)
+  startFRProcessOnServer = async () => {
+    let captureResult: ZoomCaptureResult = this.state.captureResult
+    log.debug('Sending capture result to server', captureResult)
     this.setState({
       showZoomCapture: false,
       loadingFaceRecognition: true,
       loadingText: 'Analyzing Face Recognition..'
     })
-    this.setState({ loadingFaceRecognition: true, loadindText: '' })
-
     let result: FaceRecognitionResponse = await FRapi.performFaceRecognition(captureResult)
     this.setState({ loadingFaceRecognition: false, loadindText: '' })
+    debugger
     if (!result || !result.ok) {
       this.showFRError(result.error)
     }
   }
 
-  showFRError(error: string) {
+  showFRError = (error: string) => {
     this.props.store.set('currentScreen')({
       dialogData: {
         visible: true,
@@ -142,14 +143,13 @@ class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
           </CustomButton>
         )}
 
-        {showZoomCapture && (
-          <ZoomCapture
-            height={this.height}
-            screenProps={this.screenProps}
-            onZoomReady={this.onZoomReady}
-            onCaptureResult={this.onCaptureResult}
-          />
-        )}
+        <ZoomCapture
+          height={this.height}
+          screenProps={this.screenProps}
+          onZoomReady={this.onZoomReady}
+          onCaptureResult={this.onCaptureResult}
+          showZoomCapture={showZoomCapture}
+        />
       </Wrapper>
     )
   }

@@ -187,7 +187,6 @@ class API {
    * @param {Credentials} creds
    */
   performFaceRecognition(req: FormData): Promise<$AxiosXHR<any>> {
-    //return { data: { ok: 1, livenessPassed: true, duplicates: false, zoomEnrollmentId:-1 } } //TODO: // REMOVE!!!!!!!!!!
     return this.client
       .post('/verify/facerecognition', req, {
         headers: {
