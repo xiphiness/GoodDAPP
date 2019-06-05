@@ -2,8 +2,6 @@
 import logger from '../../../lib/logger/pino-logger'
 import Config from '../../../config/config'
 
-var ZoomSDK: any
-
 export type ZoomCaptureResult = {
   status: any,
   sessionId: string,
@@ -24,6 +22,7 @@ const initialize = (): Promise<void> =>
       return reject(new Error('No license key supplied in environment variable'))
     }
 
+    let ZoomSDK = zoomSDK
     log.info('initializing zoom ..')
     log.info({ ZoomSDK })
     ZoomSDK.initialize(licenseKey, (initializationSuccessful: boolean) => {
@@ -38,6 +37,7 @@ const initialize = (): Promise<void> =>
 
 const preload = (): Promise<void> =>
   new Promise((resolve, reject) => {
+    let ZoomSDK = zoomSDK
     ZoomSDK.preload((preloadResult: any) => {
       if (preloadResult) {
         log.info('Preload status: ', { preloadResult })
@@ -49,13 +49,13 @@ const preload = (): Promise<void> =>
   })
 
 export const initializeAndPreload = async (zoomSDK: any): Promise<void> => {
-  ZoomSDK = zoomSDK
-  await initialize()
-  await preload()
+  await initialize(zoomSDK)
+  await preload(zoomSDK)
 }
 
 export const capture = (videoTrack: MediaStreamTrack): Promise<ZoomCaptureResult> =>
   new Promise((resolve, reject) => {
+    let ZoomSDK = zoomSDK
     log.info('ZoomSDK = ', { ZoomSDK })
     ZoomSDK.prepareInterface('zoom-interface-container', 'zoom-video-element', (prepareInterfaceResult: any) => {
       if (prepareInterfaceResult !== ZoomSDK.ZoomTypes.ZoomPrepareInterfaceResult.Success) {
