@@ -33,7 +33,7 @@ const createReq = (id, jwt) => {
 
 export const mytest = async i => {
   try {
-    const gun = global.Gun({ file: './loadtest/loadtest' + i + '.json', peers: [`${Config.serverUrl}/gun`] })
+    const gun = global.Gun({ file: './loadtest/loadtest' + i + '.json', peers: [Config.gunPublicUrl] })
     let mnemonic = bip39.generateMnemonic()
     let wallet = new GoodWallet({ mnemonic })
     await wallet.ready
