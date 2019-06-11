@@ -57,11 +57,16 @@ class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
 
   componentWillMount = async () => {
     this.loadedZoom = await zoomSdkLoader.load()
-    if (this.loadedZoom) this.zoomReady = true // TODO: handle zoom init issues.
+    if (this.loadedZoom) {
+      this.timeout = setTimeout(() => {
+        this.zoomReady = true // TODO: handle zoom init issues.
+      }, 500)
+    }
   }
 
   componentDidMount = async () => {
     this.setWidth()
+    this.timeout && clearTimeout(this.timeout)
   }
 
   setWidth = () => {
@@ -135,7 +140,7 @@ class FaceRecognition extends React.Component<FaceRecognitionProps, State> {
               mode="contained"
               disabled={this.zoomReady === false}
               onPress={this.showFaceRecognition}
-              loading={loadingFaceRecognition}
+              loading={this.zoomReady === false || loadingFaceRecognition}
             >
               Quick Face Recognition
             </CustomButton>
