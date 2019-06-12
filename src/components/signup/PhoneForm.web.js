@@ -5,6 +5,7 @@ import './PhoneForm.css'
 import GDStore from '../../lib/undux/GDStore'
 import { userModelValidations } from '../../lib/gundb/UserModel'
 import { Description, Title, Wrapper } from './components'
+import api from '../../lib/API/api'
 
 type Props = {
   doneCallback: ({ phone: string }) => null,
@@ -14,7 +15,8 @@ type Props = {
 
 export type MobileRecord = {
   mobile: string,
-  errorMessage?: string
+  errorMessage?: string,
+  countryCode?: string
 }
 
 type State = MobileRecord
@@ -22,10 +24,21 @@ type State = MobileRecord
 class PhoneForm extends React.Component<Props, State> {
   state = {
     mobile: this.props.screenProps.data.mobile || '',
-    errorMessage: ''
+    errorMessage: '',
+    countryCode: null
   }
 
   isValid = false
+
+  setCountryCode = async () => {
+    const countryCode = await api.getLocation()
+    console.log(countryCode)
+    this.setState({ countryCode })
+  }
+
+  componentDidMount() {
+    this.setCountryCode()
+  }
 
   handleChange = (mobile: string) => {
     if (this.state.errorMessage !== '') {
@@ -69,6 +82,7 @@ class PhoneForm extends React.Component<Props, State> {
           onBlur={this.checkErrors}
           error={errorMessage}
           onKeyDown={this.handleEnter}
+          country={this.state.countryCode}
         />
         <Description>A verification code will be sent to this number</Description>
       </Wrapper>
