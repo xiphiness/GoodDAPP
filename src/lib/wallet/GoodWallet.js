@@ -271,7 +271,10 @@ export class GoodWallet {
   async listenTxUpdates(fromBlock: string = '0', blockIntervalCallback: Function) {
     log.trace('listenTxUpdates listening from block:', fromBlock)
     fromBlock = new BN(fromBlock)
-    const toBlock = await this.getBlockNumber()
+    const toBlock = await this.getBlockNumber().catch(e => {
+      log.error('listenTxUpdates: failed getting current block number', { e })
+      return ZERO
+    })
     if (toBlock.gt(fromBlock)) {
       //Get transfers from this account
       const fromEventsFilter = {
