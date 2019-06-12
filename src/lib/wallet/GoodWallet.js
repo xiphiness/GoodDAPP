@@ -10,10 +10,8 @@ import type Web3 from 'web3'
 import { BN, toBN } from 'web3-utils'
 import numeral from 'numeral'
 import uniqBy from 'lodash/uniqBy'
-import memoize from 'lodash/memoize'
 import Config from '../../config/config'
 import logger from '../../lib/logger/pino-logger'
-import { toRawValue } from './utils'
 import { generateShareLink } from '../share'
 import WalletFactory from './WalletFactory'
 import abiDecoder from 'abi-decoder'
@@ -92,85 +90,6 @@ export class GoodWallet {
     this.init()
   }
 
-  /**
-   * Subscribes to Transfer events (from and to) the current account
-   * This is used to verify account balance changes
-   * @param fromBlock - defaultValue: '0'
-   * @returns {Promise<R>|Promise<R|*>|Promise<*>}
-   */
-  listenTxUpdates(fromBlock: string = '0') {
-    log.debug('listening from block:', fromBlock)
-    fromBlock = new BN(fromBlock)
-
-    this.getBlockNumber().then(blockNumber => {
-      this.blockNumber = blockNumber
-
-      this.pollForBlockNumber()
-
-      this.pollForEvents(
-        {
-          event: 'Transfer',
-          contract: this.tokenContract,
-          fromBlock,
-          filterPred: { from: this.wallet.utils.toChecksumAddress(this.account) }
-        },
-        async (error, events) => {
-          log.debug('send events', { error, events })
-          const uniqEvents = uniqBy(events, 'transactionHash')
-          uniqEvents.forEach(event => {
-            this.getReceiptWithLogs(event.transactionHash)
-              .then(receipt => this.sendReceiptWithLogsToSubscribers(receipt, ['receiptUpdated']))
-              .catch(err => log.error('send event get/send receipt failed:', err))
-          })
-          // Send for all events. We could define here different events
-          this.getSubscribers('send').forEach(cb => cb(error, events))
-          this.getSubscribers('balanceChanged').forEach(cb => cb(error, events))
-        }
-      )
-
-      this.pollForEvents(
-        {
-          event: 'Transfer',
-          contract: this.tokenContract,
-          fromBlock,
-          filterPred: { to: this.wallet.utils.toChecksumAddress(this.account) }
-        },
-        async (error, events) => {
-          log.debug('receive events', { error, events })
-          const uniqEvents = uniqBy(events, 'transactionHash')
-          uniqEvents.forEach(event => {
-            this.getReceiptWithLogs(event.transactionHash)
-              .then(receipt => this.sendReceiptWithLogsToSubscribers(receipt, ['receiptReceived']))
-              .catch(err => log.error('receive event get/send receipt failed:', err))
-          })
-
-          this.getSubscribers('receive').forEach(cb => cb(error, events))
-          this.getSubscribers('balanceChanged').forEach(cb => cb(error, events))
-        }
-      )
-    })
-  }
-
-  /**
-   * @return an existing (non-pending) transaction receipt information + human readable logs of the transaction
-   * @param transactionHash The TX hash to return the data for
-   */
-  async getReceiptWithLogs(transactionHash: string) {
-    const transactionReceipt = await this.wallet.eth.getTransactionReceipt(transactionHash)
-    if (!transactionReceipt) return null
-
-    const logs = abiDecoder.decodeLogs(transactionReceipt.logs)
-    const receipt = { ...transactionReceipt, logs }
-    return receipt
-  }
-
-  sendReceiptWithLogsToSubscribers(receipt: any, subscriptions: Array<string>) {
-    subscriptions.forEach(subscription => {
-      this.getSubscribers(subscription).forEach(cb => cb(receipt))
-    })
-    return receipt
-  }
-
   init(): Promise<any> {
     const ready = WalletFactory.create(GoodWallet.WalletType, this.config)
     this.ready = ready
@@ -203,17 +122,6 @@ export class GoodWallet {
           GoodDollarABI.abi,
           get(ContractsAddress, `${this.network}.GoodDollar`, GoodDollarABI.networks[this.networkId].address),
           { from: this.account }
-        )
-        this.tokenContract._name = 'tokenContract'
-        this.tokenPastEvents = memoize(
-          this.tokenContract.getPastEvents.bind(this.tokenContract),
-          (type, { fromBlock, toBlock }) => {
-            if (this.tokenPastEvents.cache.size > 20) {
-              // clears cache to prevent storing unnecessary data, 20 is an arbitrary data and can be changed in the future
-              this.tokenPastEvents.cache.clear()
-            }
-            return `${type}_${fromBlock}${toBlock}`
-          }
         )
         abiDecoder.addABI(GoodDollarABI.abi)
 
@@ -329,15 +237,6 @@ export class GoodWallet {
   }
 
   /**
-   * Queries blockchain periodically for the current blockNumber and stores it in the blockNumber property
-   */
-  pollForBlockNumber() {
-    setInterval(async () => {
-      this.blockNumber = await this.getBlockNumber()
-    }, BLOCK_TIME)
-  }
-
-  /**
    * Client side event filter. Requests all events matching to the specified event, of a specified contract, then filters them and returns the event Object
    * @param {object} params - an object with params
    * @param {string} params.event - Event to subscribe to
@@ -348,61 +247,127 @@ export class GoodWallet {
    * @returns {Promise<*>}
    */
   async getEvents({ event, contract, filterPred, fromBlock = ZERO, toBlock }: QueryEvent): Promise<[]> {
-    const pastEvents =
-      {
-        tokenContract: this.tokenPastEvents
-      }[contract._name] || (() => Promise.resolve([]))
-
-    const events = await pastEvents('allEvents', { fromBlock, toBlock })
+    const events = await this.tokenContract.getPastEvents('allEvents', { fromBlock, toBlock })
     const res1 = filterFunc(events, { event })
     const res = filterFunc(res1, { returnValues: { ...filterPred } })
 
-    log.debug({ res, events, res1, fromBlock: fromBlock.toString(), toBlock: toBlock && toBlock.toString() })
+    log.debug('getEvents', {
+      res,
+      events,
+      res1,
+      fromBlock: fromBlock.toString(),
+      toBlock: toBlock && toBlock.toString()
+    })
 
     return res
   }
 
   /**
-   * Polls for events every INTERVAL defined by BLOCK_TIME and BLOCK_COUNT, the result is based on specified options
-   * It queries the range 'fromBlock'-'toBlock' and then continues querying the blockchain for most recent events, from
-   * the 'lastProcessedBlock' to the 'latest' every INTERVAL
-   * @param {string} params - an object with params
-   * @param {string} params.event - Event to subscribe to
-   * @param {object} params.contract - Contract from which event will be queried
-   * @param {object} params.filterPred - Event's filter. Does not required to be indexed as it's filtered locally
-   * @param {BN} params.fromBlock - Lower blocks range value
-   * @param {function} callback - Function to be called once an event is received
-   * @returns {Promise<void>}
+   * Subscribes to Transfer events (from and to) the current account
+   * This is used to verify account balance changes
+   * @param fromBlock - defaultValue: '0'
+   * @returns {Promise<R>|Promise<R|*>|Promise<*>}
    */
-  async pollForEvents({ event, contract, filterPred, fromBlock }: QueryEvent, callback: Function) {
-    const INTERVAL = BLOCK_COUNT * BLOCK_TIME
-    const toBlock = this.blockNumber
-
-    fromBlock = fromBlock === undefined ? ZERO : fromBlock
-
-    if (fromBlock && fromBlock.eq(toBlock)) {
-      log.debug('all blocks processed', { fromBlock: fromBlock.toString(), toBlock: toBlock.toString() })
-    } else {
-      try {
-        const events = await this.getEvents({ event, contract, filterPred, fromBlock, toBlock })
-        callback(null, events)
-      } catch (e) {
-        log.error('getEvents call @pollForEvents failed:', { e })
-        callback(e, [])
+  async listenTxUpdates(fromBlock: string = '0', blockIntervalCallback: Function) {
+    log.trace('listenTxUpdates listening from block:', fromBlock)
+    fromBlock = new BN(fromBlock)
+    const toBlock = await this.getBlockNumber()
+    if (toBlock.gt(fromBlock)) {
+      //Get transfers from this account
+      const fromEventsFilter = {
+        event: 'Transfer',
+        contract: this.tokenContract,
+        fromBlock,
+        toBlock,
+        filterPred: { from: this.wallet.utils.toChecksumAddress(this.account) }
       }
+      const fromEventsPromise = this.getEvents(fromEventsFilter)
+        .catch(e => {
+          log.error('listenTxUpdates fromEventsPromise failed:', { e, fromEventsFilter })
+          return { error: e }
+        })
+        .then(res => {
+          log.debug("listenTxUpdates got 'from' events", { res })
+          let events = res.error ? [] : res
+          let error = undefined || res.error
+          const uniqEvents = uniqBy(events, 'transactionHash')
+          uniqEvents.forEach(event => {
+            this.getReceiptWithLogs(event.transactionHash)
+              .then(receipt => this.sendReceiptWithLogsToSubscribers(receipt, ['receiptUpdated']))
+              .catch(err => log.error('send event get/send receipt failed:', err))
+          })
+          // Send for all events. We could define here different events
+          this.getSubscribers('send').forEach(cb => cb(error, events))
+          this.getSubscribers('balanceChanged').forEach(cb => cb(error, events))
+        })
+        .catch(e => {
+          log.error('listenTxUpdates fromEventsPromise unexpected error:', { e })
+        })
+
+      //Get transfers to this account
+      const toEventsFilter = {
+        event: 'Transfer',
+        contract: this.tokenContract,
+        fromBlock,
+        toBlock,
+        filterPred: { to: this.wallet.utils.toChecksumAddress(this.account) }
+      }
+      const toEventsPromise = this.getEvents(toEventsFilter)
+        .catch(e => {
+          log.error('listenTxUpdates toEventsPromise failed:', { e, toEventsFilter })
+          return { error: e }
+        })
+        .then(res => {
+          log.debug("listenTxUpdates got 'to' events", { res })
+          let events = res.error ? [] : res
+          let error = undefined || res.error
+          const uniqEvents = uniqBy(events, 'transactionHash')
+          uniqEvents.forEach(event => {
+            this.getReceiptWithLogs(event.transactionHash)
+              .then(receipt => this.sendReceiptWithLogsToSubscribers(receipt, ['receiptReceived']))
+              .catch(err => log.error('receive event get/send receipt failed:', err))
+          })
+          // Send for all events. We could define here different events
+          this.getSubscribers('receive').forEach(cb => cb(error, events))
+          this.getSubscribers('balanceChanged').forEach(cb => cb(error, events))
+        })
+        .catch(e => {
+          log.error('listenTxUpdates toEventsPromise unexpected error:', { e })
+        })
+
+      //wait for events processing to end
+      await Promise.all([fromEventsPromise, toEventsPromise])
     }
 
-    log.debug('about to recurse', {
-      event,
-      contract,
-      filterPred,
+    const INTERVAL = BLOCK_COUNT * BLOCK_TIME
+    log.trace('listenTxUpdates setting timeout. processed:', {
       fromBlock: fromBlock && fromBlock.toString(),
       toBlock: toBlock && toBlock.toString()
     })
-
+    blockIntervalCallback && blockIntervalCallback({ fromBlock: fromBlock.toNumber(), toBlock: toBlock.toNumber() })
     setTimeout(() => {
-      this.pollForEvents({ event, contract, filterPred, fromBlock: toBlock }, callback)
+      this.listenTxUpdates(toBlock, blockIntervalCallback)
     }, INTERVAL)
+  }
+
+  /**
+   * @return an existing (non-pending) transaction receipt information + human readable logs of the transaction
+   * @param transactionHash The TX hash to return the data for
+   */
+  async getReceiptWithLogs(transactionHash: string) {
+    const transactionReceipt = await this.wallet.eth.getTransactionReceipt(transactionHash)
+    if (!transactionReceipt) return null
+
+    const logs = abiDecoder.decodeLogs(transactionReceipt.logs)
+    const receipt = { ...transactionReceipt, logs }
+    return receipt
+  }
+
+  sendReceiptWithLogsToSubscribers(receipt: any, subscriptions: Array<string>) {
+    subscriptions.forEach(subscription => {
+      this.getSubscribers(subscription).forEach(cb => cb(receipt))
+    })
+    return receipt
   }
 
   async balanceOf(): Promise<number> {
