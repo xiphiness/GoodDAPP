@@ -3,7 +3,7 @@ import React, { Component } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import normalize from 'react-native-elements/src/helpers/normalizeText'
 import type { Store } from 'undux'
-import gdWallet from '../../lib/wallet/GoodWallet'
+import goodWallet from '../../lib/wallet/GoodWallet'
 import wrapper from '../../lib/undux/utils/wrapper'
 import GDStore from '../../lib/undux/GDStore'
 import { CustomButton, Section, TopBar, Wrapper } from '../common'
@@ -35,13 +35,13 @@ class Claim extends Component<ClaimProps, ClaimState> {
 
   interval = null
 
-  goodWalletWrapped = wrapper(gdWallet, this.props.store)
+  goodWalletWrapped = wrapper(goodWallet, this.props.store)
 
   async componentDidMount() {
     //if we returned from facerecoginition then the isValid param would be set
     //this happens only on first claim
     const isValid = this.props.screenProps.screenState && this.props.screenProps.screenState.isValid
-    if (isValid && gdWallet && (await gdWallet.isCitizen())) {
+    if (isValid && (await goodWallet.isCitizen())) {
       this.handleClaim()
     } else if (isValid === false) {
       this.props.screenProps.goToRoot()
