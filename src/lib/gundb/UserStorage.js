@@ -514,6 +514,28 @@ export class UserStorage {
   }
 
   /**
+   *
+   * @param {string} field
+   * @param {string} value
+   * @param {string} privacy
+   * @returns {boolean}
+   */
+  async isFieldIndexedByOther(field: string, value: string) {
+    const cleanValue = UserStorage.cleanFieldForIndex(field, value)
+
+    try {
+      const indexValue = await this.gun
+        .get(`users/by${field}`)
+        .get(cleanValue)
+        .then()
+      return indexValue && indexValue.pub !== this.gunuser.is.pub
+    } catch (err) {
+      logger.error('indexProfileField', err)
+      return false
+    }
+  }
+
+  /**
    * Generates index by field if privacy is public, or empty index if it's not public
    *
    * @param {string} field - Profile attribute
@@ -528,10 +550,11 @@ export class UserStorage {
     const cleanValue = UserStorage.cleanFieldForIndex(field, value)
     if (!cleanValue) return Promise.resolve({ err: 'Indexable field cannot be null or empty', ok: 0 })
 
-    const indexNode = this.gun.get(`users/by${field}`).get(cleanValue)
-    logger.debug('indexProfileField', { field, cleanValue, value, privacy })
-
     try {
+      const indexNode = this.gun.get(`users/by${field}`).get(cleanValue)
+      if (await this.isFieldIndexedByOther(field, value)) {
+        return Promise.resolve({ err: `Existing index on field ${field}`, ok: 0 })
+      }
       const indexValue = await indexNode.then()
       logger.debug('indexProfileField', {
         field,
@@ -540,16 +563,12 @@ export class UserStorage {
         indexValue: indexValue,
         currentUser: this.gunuser.is.pub
       })
-      if (indexValue && indexValue.pub !== this.gunuser.is.pub) {
-        return Promise.resolve({ err: `Existing index on field ${field}`, ok: 0 })
-      }
       if (privacy !== 'public' && indexValue !== undefined) {
         return indexNode.putAck(null)
       }
 
       const indexResult = indexNode.putAck(this.gunuser)
 
-      // logger.info({ gunResult })
       return indexResult
     } catch (err) {
       logger.error('indexProfileField', err)
