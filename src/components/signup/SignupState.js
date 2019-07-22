@@ -20,7 +20,7 @@ import type { SMSRecord } from './SmsForm'
 import GDStore from '../../lib/undux/GDStore'
 import { getUserModel, type UserModel } from '../../lib/gundb/UserModel'
 import Config from '../../config/config'
-import { fireEvent } from '../../../lib/analytics/analytics'
+import { fireEvent } from '../../lib/analytics/analytics'
 
 const log = logger.child({ from: 'SignupState' })
 
