@@ -1,7 +1,7 @@
 // @flow
 import React from 'react'
-import PhoneInput from 'react-phone-number-input'
 import debounce from 'lodash/debounce'
+import InputPhone from '../common/form/InputPhone'
 import './PhoneForm.css'
 import { userModelValidations } from '../../lib/gundb/UserModel'
 import { UserStorage } from '../../lib/gundb/UserStorageClass'
@@ -85,7 +85,7 @@ class PhoneForm extends React.Component<Props, State> {
             </Section.Title>
           </Section.Row>
           <Section.Row justifyContent="center" style={styles.row}>
-            <PhoneInput
+            <InputPhone
               id={key + '_input'}
               value={this.state.mobile}
               onChange={this.handleChange}

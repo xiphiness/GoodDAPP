@@ -1,7 +1,10 @@
 // @flow
 import React, { useEffect, useState } from 'react'
 import { TextInput, View } from 'react-native'
+import { isMobileSafari } from 'mobile-device-detect'
 import { withStyles } from '../../../lib/styles'
+import SimpleStore from '../../../lib/undux/SimpleStore'
+import Config from '../../../config/config'
 
 // keyCode constants
 const BACKSPACE = 8
@@ -94,6 +97,7 @@ const Input = ({ min, max, pattern, focus, shouldAutoFocus, onChange, ...props }
       onChange(value)
     }
   }
+
   return <TextInput {...props} onChange={handleOnChange} ref={inputRef => (input = inputRef)} />
 }
 
@@ -255,6 +259,34 @@ const OtpInput = (props: Props) => {
       focusNextInput()
     }
   }
+
+  const simpleStore = SimpleStore.useStore()
+
+  const onFocusMobileSafari = () => {
+    console.info('onFocus')
+    window.scrollTo(0, 0)
+    document.body.scrollTop = 0
+    simpleStore.set('isMobileSafariKeyboardShown')(true)
+  }
+
+  const onBlurMobileSafari = () => simpleStore.set('isMobileSafariKeyboardShown')(false)
+
+  const shouldChangeSizeOnKeyboardShown = isMobileSafari && simpleStore.set && Config.safariMobileKeyboardGuidedSize
+
+  let changeFocusTimer
+  useEffect(() => {
+    if (!shouldChangeSizeOnKeyboardShown) {
+      return
+    }
+
+    if (activeInput === -1) {
+      setTimeout(onBlurMobileSafari, 2000)
+    } else {
+      clearTimeout(changeFocusTimer)
+      onFocusMobileSafari()
+    }
+    console.info('useEffect -> ', activeInput)
+  }, [activeInput, shouldChangeSizeOnKeyboardShown])
 
   const renderInputs = () => {
     const otp = getOtpValue()
