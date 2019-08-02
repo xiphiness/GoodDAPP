@@ -34,6 +34,20 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+/* Preventing iOS scrolling on input focus */
+
+html {
+  margin: 0;
+  overflow: hidden;
+  height: 100%
+}
+body {
+  margin: 0;
+  overflow: auto;
+  height: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Reset */
 a {
   color: inherit; /* blue colors for links too */
