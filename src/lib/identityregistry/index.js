@@ -38,9 +38,9 @@ export function refreshContract() {
 /**
  * ASYNC - Calls IdentityRegistry contract's add() function.
  *
- * @param {string} id - String of the identity [address]
- * @param {string} metadata - String of metadata [bytes]
- * @param {string} [sender=""]
+ * @param {string} id - Address of the identity to add [address]
+ * @param {string} metadata - Metadata [bytes]
+ * @param {string} [sender=""] - The sender of the transaction [address]
  *
  */
 export async function add(id, metadata, sender = '') {
@@ -49,22 +49,49 @@ export async function add(id, metadata, sender = '') {
   return res
 }
 
-export async function remove(id /*: string*/, sender /*: string*/ = '') {
+/**
+ * ASYNC - Calls IdentityRegistry contract's remove() function.
+ *
+ * @param {string} id - Address of the identity to remove [address]
+ * @param {string} [sender=""] - The sender of the transaction [address]
+ *
+ */
+export async function remove(id, sender = '') {
   let res = await this.contract.methods.remove(id).send({ from: sender || this.web3.eth.defaultAccount })
   return res
 }
 
-export async function update(id /*: string*/, metadata /*: string*/, sender /*: string*/ = '') {
+/**
+ * ASYNC - Calls IdentityRegistry contract's update() function.
+ *
+ * @param {string} id - Address of the identity to update [address]
+ * @param {string} metadata - Metadata [bytes]
+ * @param {string} [sender=""] - The sender of the transaction [address]
+ *
+ */
+export async function update(id, metadata, sender = '') {
   let res = await this.contract.methods.update(id, metadata).send({ from: sender || this.web3.eth.defaultAccount })
   return res
 }
 
-export async function removeSelf(sender /*: string*/ = '') {
+/**
+ * ASYNC - Calls IdentityRegistry contract's removeSelf() function. If successful, will remove an identity registered under the address of the sender.
+ *
+ * @param {string} [sender=""] - The sender of the transaction [address]
+ *
+ */
+export async function removeSelf(sender = '') {
   let res = await this.contract.methods.removeSelf().send({ from: sender || this.web3.eth.defaultAccount })
   return res
 }
 
-export async function isHuman(id /*: string*/) {
+/**
+ * ASYNC - Calls IdentityRegistry contract's isHuman() function. Will return true if the address passed is human, false otherwise.
+ *
+ * @param {string} id - Address of the identity to update [address]
+ *
+ */
+export async function isHuman(id) {
   let res = await this.contract.methods.isHuman(id).call()
   return res
 }
