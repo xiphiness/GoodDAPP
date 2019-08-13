@@ -46,7 +46,8 @@ export function refreshContract() {
  */
 export async function add(id, metadata, sender = '') {
   //NOTE: Assumption is defaultAccount for now
-  let res = await this.contract.methods.add(id, metadata).send({ from: sender || this.web3.eth.defaultAccount })
+  let contract = getContract()
+  let res = await contract.methods.add(id, metadata).send({ from: sender || this.web3.eth.defaultAccount })
   return res
 }
 
@@ -59,7 +60,8 @@ export async function add(id, metadata, sender = '') {
  * @return {object} receipt - Receipt of the transaction.
  */
 export async function remove(id, sender = '') {
-  let res = await this.contract.methods.remove(id).send({ from: sender || this.web3.eth.defaultAccount })
+  let contract = getContract()
+  let res = await contract.methods.remove(id).send({ from: sender || this.web3.eth.defaultAccount })
   return res
 }
 
@@ -73,7 +75,8 @@ export async function remove(id, sender = '') {
  * @return {object} receipt - Receipt of the transaction.
  */
 export async function update(id, metadata, sender = '') {
-  let res = await this.contract.methods.update(id, metadata).send({ from: sender || this.web3.eth.defaultAccount })
+  let contract = getContract()
+  let res = await contract.methods.update(id, metadata).send({ from: sender || this.web3.eth.defaultAccount })
   return res
 }
 
@@ -84,7 +87,8 @@ export async function update(id, metadata, sender = '') {
  * @return {object} receipt - Receipt of the transaction.
  */
 export async function removeSelf(sender = '') {
-  let res = await this.contract.methods.removeSelf().send({ from: sender || this.web3.eth.defaultAccount })
+  let contract = getContract()
+  let res = await contract.methods.removeSelf().send({ from: sender || this.web3.eth.defaultAccount })
   return res
 }
 
@@ -95,7 +99,8 @@ export async function removeSelf(sender = '') {
  * @return {boolean} isHuman - Returned boolean from contract call.
  */
 export async function isHuman(id) {
-  let res = await this.contract.methods.isHuman(id).call()
+  let contract = getContract()
+  let res = await contract.methods.isHuman(id).call()
   return res
 }
 
