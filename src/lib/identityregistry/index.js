@@ -36,10 +36,14 @@ export function refreshContract() {
  */
 
 /**
+ * ASYNC - Calls IdentityRegistry contract's add() function.
  *
+ * @param {string} id - String of the identity [address]
+ * @param {string} metadata - String of metadata [bytes]
+ * @param {string} [sender=""]
  *
  */
-export async function add(id /*: string*/, metadata /*: string*/, sender /*: string*/ = '') {
+export async function add(id, metadata, sender = '') {
   //NOTE: Assumption is defaultAccount for now
   let res = await this.contract.methods.add(id, metadata).send({ from: sender || this.web3.eth.defaultAccount })
   return res
