@@ -21,17 +21,18 @@ function init() {
   refreshContract()
 }
 
-//Getters and setters
-export function setConfig(_config) {
-  config = _config
+//Refresh function to reset contract upon new config provided
+export function refreshContract() {
+  setContract(new web3.eth.Contract(config.IdentityRegistry.abi, config.IdentityRegistry.address))
 }
 
+//Getters and setters
 export function getConfig() {
   return config ? config : throw 'config not defined!'
 }
 
-export function setWeb3(_web3) {
-  web3 = _web3
+export function getContract() {
+  return contract
 }
 
 export function getWeb3() {
@@ -40,15 +41,13 @@ export function getWeb3() {
     : throw "web3 not defined! Please set initialize and pass a Web3 object to the module via 'setWeb3()'"
 }
 
-//Refresh function to reset contract upon new config provided
-export function refreshContract() {
-  setContract(new web3.eth.Contract(config.IdentityRegistry.abi, config.IdentityRegistry.address))
+export function setConfig(_config) {
+  config = _config
 }
 
-export function getContract() {
-  return contract
+export function setWeb3(_web3) {
+  web3 = _web3
 }
-
 export function setContract(_contract) {
   contract = _contract
 }
