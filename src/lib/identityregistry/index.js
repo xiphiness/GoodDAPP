@@ -42,6 +42,7 @@ export function refreshContract() {
  * @param {string} metadata - Metadata [bytes]
  * @param {string} [sender=""] - The sender of the transaction [address]
  *
+ * @return {object} receipt - Receipt of the transaction.
  */
 export async function add(id, metadata, sender = '') {
   //NOTE: Assumption is defaultAccount for now
@@ -55,6 +56,7 @@ export async function add(id, metadata, sender = '') {
  * @param {string} id - Address of the identity to remove [address]
  * @param {string} [sender=""] - The sender of the transaction [address]
  *
+ * @return {object} receipt - Receipt of the transaction.
  */
 export async function remove(id, sender = '') {
   let res = await this.contract.methods.remove(id).send({ from: sender || this.web3.eth.defaultAccount })
@@ -68,6 +70,7 @@ export async function remove(id, sender = '') {
  * @param {string} metadata - Metadata [bytes]
  * @param {string} [sender=""] - The sender of the transaction [address]
  *
+ * @return {object} receipt - Receipt of the transaction.
  */
 export async function update(id, metadata, sender = '') {
   let res = await this.contract.methods.update(id, metadata).send({ from: sender || this.web3.eth.defaultAccount })
@@ -78,7 +81,7 @@ export async function update(id, metadata, sender = '') {
  * ASYNC - Calls IdentityRegistry contract's removeSelf() function. If successful, will remove an identity registered under the address of the sender.
  *
  * @param {string} [sender=""] - The sender of the transaction [address]
- *
+ * @return {object} receipt - Receipt of the transaction.
  */
 export async function removeSelf(sender = '') {
   let res = await this.contract.methods.removeSelf().send({ from: sender || this.web3.eth.defaultAccount })
@@ -89,7 +92,7 @@ export async function removeSelf(sender = '') {
  * ASYNC - Calls IdentityRegistry contract's isHuman() function. Will return true if the address passed is human, false otherwise.
  *
  * @param {string} id - Address of the identity to update [address]
- *
+ * @return {boolean} isHuman - Returned boolean from contract call.
  */
 export async function isHuman(id) {
   let res = await this.contract.methods.isHuman(id).call()
