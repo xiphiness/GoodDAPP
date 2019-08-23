@@ -1,5 +1,6 @@
 // @flow
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
+
 import type { Store } from 'undux'
 import normalize from '../../lib/utils/normalizeText'
 import GDStore from '../../lib/undux/GDStore'
@@ -118,24 +119,25 @@ const Dashboard = props => {
   const { balance, entitlement } = gdstore.get('account')
   const { avatar, fullName } = gdstore.get('profile')
   const feeds = gdstore.get('feeds')
+  const [headerLarge, setHeaderLarge] = useState(true)
 
-  // TODO: Calculate scroll position to update Dashboard avatar, name and gd amount view
-  const scrollPos = 100
-
-  log.info('LOGGER FEEDS', { props })
   return (
     <Wrapper style={styles.dashboardWrapper}>
       <Section style={[styles.topInfo]}>
-        {scrollPos < 100 ? (
-          <Section style={[styles.userInfo, styles.userInfoVertical]}>
+        {headerLarge ? (
+          <Section.Stack alignItems="center">
             <Avatar onPress={() => screenProps.push('Profile')} size={68} source={avatar} style={[styles.avatarBig]} />
-            <Section.Title style={[styles.userName]}>{fullName || ' '}</Section.Title>
-            <BigGoodDollar
-              bigNumberStyles={styles.bigNumberVerticalStyles}
-              bigNumberUnitStyles={styles.bigNumberUnitStyles}
-              number={balance}
-            />
-          </Section>
+            <Section.Text color="gray80Percent" fontFamily="slab" fontSize={18}>
+              {fullName || ' '}
+            </Section.Text>
+            <Section.Row style={styles.bigNumberWrapper}>
+              <BigGoodDollar
+                number={balance}
+                bigNumberProps={{ fontSize: 42, fontWeight: 'semibold' }}
+                bigNumberUnitStyles={styles.bigNumberUnitStyles}
+              />
+            </Section.Row>
+          </Section.Stack>
         ) : (
           <Section style={[styles.userInfo, styles.userInfoHorizontal]}>
             <Avatar
@@ -144,11 +146,7 @@ const Dashboard = props => {
               source={avatar}
               style={[styles.avatarSmall]}
             />
-            <BigGoodDollar
-              bigNumberStyles={styles.bigNumberStyles}
-              bigNumberUnitStyles={styles.bigNumberUnitStyles}
-              number={balance}
-            />
+            <BigGoodDollar number={balance} />
           </Section>
         )}
         <Section.Row style={styles.buttonsRow}>
@@ -187,6 +185,28 @@ const Dashboard = props => {
         initialNumToRender={PAGE_SIZE}
         onEndReached={getNextFeed.bind(null, store)}
         updateData={() => {}}
+        onScroll={({ nativeEvent }) => {
+          // Replicating Header Height.
+          // TODO: Improve this when doing animation
+          const HEIGHT_FULL =
+            props.theme.sizes.defaultDouble +
+            68 +
+            props.theme.sizes.default +
+            normalize(18) +
+            props.theme.sizes.defaultDouble * 2 +
+            normalize(42) +
+            normalize(70)
+          const HEIGHT_BASE = props.theme.sizes.defaultDouble + 68 + props.theme.sizes.default + normalize(70)
+
+          const HEIGHT_DIFF = HEIGHT_FULL - HEIGHT_BASE
+          const scrollPos = nativeEvent.contentOffset.y
+          const scrollPosAlt = headerLarge ? scrollPos - HEIGHT_DIFF : scrollPos + HEIGHT_DIFF
+          const newHeaderLarge = scrollPos <= HEIGHT_BASE || scrollPosAlt <= HEIGHT_BASE
+          log.info('scrollPos', { newHeaderLarge, scrollPos, scrollPosAlt, HEIGHT_DIFF, HEIGHT_BASE, HEIGHT_FULL })
+          if (newHeaderLarge !== headerLarge) {
+            setHeaderLarge(newHeaderLarge)
+          }
+        }}
       />
       {currentFeed && (
         <FeedModalList
@@ -226,15 +246,6 @@ const getStylesFromProps = ({ theme }) => ({
     backgroundColor: 'transparent',
     marginBottom: 12,
   },
-  userInfoVertical: {
-    alignItems: 'center',
-    paddingLeft: 0,
-    paddingRight: 0,
-    paddingBottom: 0,
-    paddingTop: 0,
-    flexDirection: 'column',
-    justifyContent: 'center',
-  },
   userInfoHorizontal: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -245,22 +256,13 @@ const getStylesFromProps = ({ theme }) => ({
     paddingTop: 0,
   },
   avatarBig: {
-    borderRadius: '50%',
-    height: 68,
-    marginBottom: 12,
-    width: 68,
+    marginBottom: theme.sizes.default,
   },
   avatarSmall: {
     borderRadius: '50%',
     height: 42,
     margin: 0,
     width: 42,
-  },
-  userName: {
-    color: theme.colors.gray80Percent,
-    fontFamily: 'RobotoSlab-Regular',
-    fontSize: normalize(18),
-    marginBottom: theme.sizes.defaultDouble,
   },
   buttonsRow: {
     alignItems: 'center',
@@ -299,22 +301,12 @@ const getStylesFromProps = ({ theme }) => ({
   rightButtonText: {
     marginLeft: 16,
   },
-  bigNumberVerticalStyles: {
-    fontFamily: theme.fonts.slab,
-    fontSize: normalize(42),
-    marginRight: theme.sizes.defaultHalf,
-    fontWeight: '700',
-  },
-  bigNumberStyles: {
-    fontFamily: theme.fonts.slab,
-    fontSize: normalize(36),
-    marginRight: theme.sizes.defaultHalf,
-    fontWeight: '700',
+  bigNumberWrapper: {
+    marginVertical: theme.sizes.defaultDouble,
+    alignItems: 'baseline',
   },
   bigNumberUnitStyles: {
-    fontFamily: theme.fonts.slab,
-    fontSize: normalize(18),
-    fontWeight: '700',
+    marginRight: normalize(-20),
   },
 })
 

@@ -8,7 +8,6 @@ import ContractsAddress from '@gooddollar/goodcontracts/releases/deployment.json
 import ERC20ABI from '@gooddollar/goodcontracts/build/contracts/ERC20.min.json'
 import type Web3 from 'web3'
 import { BN, toBN } from 'web3-utils'
-import numeral from 'numeral'
 import uniqBy from 'lodash/uniqBy'
 import abiDecoder from 'abi-decoder'
 import values from 'lodash/values'
@@ -417,13 +416,13 @@ export class GoodWallet {
     return (lastClaim.toNumber() + DAY_IN_SECONDS) * MILLISECONDS
   }
 
-  async getAmountAndQuantityClaimedToday(entitlement: BN): Promise<any> {
-    const people = (await this.identityContract.methods.whiteListedCount().call()) || ZERO
-
-    const amount = people.toNumber() * entitlement.toNumber()
+  async getAmountAndQuantityClaimedToday(): Promise<any> {
+    const people = ((await this.identityContract.methods.whiteListedCount().call()) || ZERO).toNumber()
+    const dialyUBI = 1
+    const amount = people * dialyUBI
     return {
-      people: numeral(people.toNumber()).format('0b'),
-      amount: numeral(amount).format('0b'),
+      people: people,
+      amount,
     }
   }
 
