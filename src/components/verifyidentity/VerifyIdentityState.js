@@ -1,5 +1,6 @@
 // @flow
 import React, { useEffect, useState } from 'react'
+
 //import { AsyncStorage, ScrollView, StyleSheet, View } from 'react-native'
 //import { createSwitchNavigator } from '@react-navigation/core'
 //import { isMobileSafari } from 'mobile-device-detect'
@@ -16,14 +17,26 @@ import { getUserModel, type UserModel } from '../../lib/gundb/UserModel'
 import { fireEvent, initAnalytics } from '../../lib/analytics/analytics'
 import Config from '../../config/config'
 import type { SMSRecord } from './SmsForm'
-import SignupCompleted from './SignupCompleted'
-import EmailConfirmation from './EmailConfirmation'
-import SmsForm from './SmsForm'
-import PhoneForm from './PhoneForm'
-import EmailForm from './EmailForm'
-import NameForm from './NameForm'
 */
-const log = logger.child({ from: 'VerifyConfirmation' })
+
+/**
+
+TermsConditions ---> IdentityForm => [ PhotoIDForm, SelfieForm, VideoForm, TwitterForm, LinkedInForm, GitHubForm, FacebookForm ] ---> SubmissionConfirmation
+
+*/
+
+import TermsConditions from './TermsConditions'
+import IdentityForm from './IdentityForm'
+import PhotoIDForm from './SmsForm'
+import SelfieForm from './PhoneForm'
+import VideoForm from './EmailForm'
+import TwitterForm from './NameForm'
+import LinkedInForm from './LinkedInForm'
+import GitHubForm from './GitHubForm'
+import FacebookForm from './FacebookForm'
+import SubmissionConfirmation from './SubmissionConfirmation'
+
+const log = logger.child({ from: 'VerifyIdentityState' })
 
 const SignupWizardNavigator = createSwitchNavigator(
   {
