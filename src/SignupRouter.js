@@ -6,6 +6,9 @@ import { Platform } from 'react-native'
 import Signup from './components/signup/SignupState'
 import Auth from './components/auth/Auth'
 
+console.log('fucucuucuckkk')
+console.log(Signup)
+
 const router = createSwitchNavigator(
   {
     Auth,
