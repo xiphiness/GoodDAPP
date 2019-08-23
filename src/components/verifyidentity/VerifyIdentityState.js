@@ -4,20 +4,19 @@ import React, { useEffect, useState } from 'react'
 //import { AsyncStorage, ScrollView, StyleSheet, View } from 'react-native'
 //import { createSwitchNavigator } from '@react-navigation/core'
 //import { isMobileSafari } from 'mobile-device-detect'
-/*
+
 import NavBar from '../appNavigation/NavBar'
 import { navigationConfig } from '../appNavigation/navigationConfig'
 import logger from '../../lib/logger/pino-logger'
-
+/*
 import API from '../../lib/API/api'
 import SimpleStore from '../../lib/undux/SimpleStore'
 import { useErrorDialog } from '../../lib/undux/utils/dialog'
 
 import { getUserModel, type UserModel } from '../../lib/gundb/UserModel'
 import { fireEvent, initAnalytics } from '../../lib/analytics/analytics'
-import Config from '../../config/config'
-import type { SMSRecord } from './SmsForm'
 */
+import Config from '../../config/config'
 
 /**
 
@@ -40,12 +39,16 @@ const log = logger.child({ from: 'VerifyIdentityState' })
 
 const SignupWizardNavigator = createSwitchNavigator(
   {
-    Name: NameForm,
-    Phone: PhoneForm,
-    SMS: SmsForm,
-    Email: EmailForm,
-    EmailConfirmation,
-    SignupCompleted,
+    TermsConditions,
+    IdentityForm, //need to distinguish name in line with the others
+    PhotoID: PhotoIDForm,
+    Selfie: SelfieForm,
+    Video: VideoForm,
+    Twitter: TwitterForm,
+    LinkedIn: LinkedInForm,
+    GitHub: GitHubForm,
+    Facebook: FacebookForm,
+    SubmissionConfirmation,
   },
   navigationConfig
 )
